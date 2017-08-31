@@ -1,0 +1,176 @@
+#!/usr/bin/php -q
+<?php
+	/*
+	*
+	* Enio Borges Ribeiro
+	* SO - TRT2
+ 	* 09/08/2017
+	*
+	*
+	*/
+
+	if($argc == 1)	
+		die("Indique o caminho do arquivo.\n");
+	else
+		$file = $argv[1];
+
+	if(!file_exists($file)){
+		die("O arquivo não existe\n");
+	}	
+
+
+	$fp = fopen($file, "r");
+	$content = fread($fp, filesize($file));
+
+	
+
+
+	//Todas as linhass
+	$lines = null;
+
+
+	preg_match_all("/^define host{(.*?)}/ms", $content, $hosts);
+
+
+	$printHeader = true;
+
+	//lista o conteudo dos hosts
+	foreach($hosts[0] as $data){
+	
+
+		$itens = array(
+					'use' => null,
+					'host_name' => null,
+					'alias' => null,
+					'address' => null,
+					'parents' => null,
+					'os' => null,
+					'host-preset' => null,
+					'host_is_collector' => 'no',
+					'monitored_by' => 'default nagios',
+					'hostgroups' => null
+					);
+	
+		//header
+		if(isset($printHeader) && $printHeader == true)
+			echo  implode(";", array_keys($itens)). "\n";		
+
+		unset($printHeader);
+			
+		//Separa os attributos em array
+		preg_match_all("/^(.*?)\n/m", $data, $contentArray);
+
+		//remove o primeiro elemento do array "define host{"
+		array_shift($contentArray[0]);	
+
+		for($i = 0; $i < sizeof($contentArray[0]); $i++){
+		
+			//Separa cada atributo em $key e $value			
+			preg_match("/(#|use|host_name|alias|address|parents|icon_image)(.*?)\n$/m", $contentArray[0][$i], $itensArray);
+			
+			if(sizeof($itensArray) > 0){
+					$key 	= trim($itensArray[1]);
+					$value 	= trim($itensArray[2]);
+
+					$value = preg_replace('@\s*;.*$@', '', $value);
+
+					if($key == '#'){
+					}
+					else if($key == 'use'){
+							$itens['host-preset'] = $value;
+							$itens['use'] = $value;
+					}
+					else if($key == 'icon_image'){
+							$itens['os'] = substr($value, 0, strlen($value)-4 );;
+					}
+					else if($key == 'host_name'){
+							$itens['host_name'] = $value;							
+						
+							$hostGroup = null;
+
+							//Host Group
+							if($argc == 3){
+								 $hostGroup = $argv[2];
+
+								if(stristr($hostGroup,'+')){									
+									$hostGroup = getHostGroupName($value, $content);
+									
+									if($hostGroup != "") $hostGroup .= ",";
+
+									$hostGroup .= substr($argv[2], 1);
+								}
+
+							}
+							else {
+									$hostGroup = getHostGroupName($value, $content);
+									
+							}
+					
+							$itens['hostgroups'] = $hostGroup;	
+					}
+					else{
+							$itens[$key] = $value;
+					}
+
+			}
+
+		}
+
+		echo  implode(";", $itens) . "\n";
+}
+
+
+
+
+
+
+
+function  getHostGroupName($host, $content){
+
+		$hostGroups = "";
+		$count = 0;
+
+		preg_match_all("/define hostgroup{(.*?)}$/ms", $content, $hostGroupArray);
+	
+
+	
+
+    	foreach($hostGroupArray[0] as $data){
+
+			if(preg_match("/members/i", $data)){
+				
+				preg_match_all("/^(.*?)\n/m", $data, $contentArray);
+
+				array_shift($contentArray[0]);
+
+				foreach($contentArray[0] as $item){
+
+					if(preg_match('/'.$host.'/i', $item)){
+						foreach($contentArray[0] as $h){
+							
+							if(preg_match('/hostgroup_name/i', $h)){
+								
+								//Remove Comentarios
+								$h = preg_replace('@\s*;.*$@', '', $h);
+
+
+								$hostGroupName = trim(str_replace('hostgroup_name', '', $h));
+
+								if(!(preg_match('/'.$hostGroupName.'/i', $hostGroups))){
+									
+									if($count > 0 ) $hostGroups .= ',';
+																		$hostGroups .=  $hostGroupName;
+								}
+
+								$count++;
+							}
+						}
+					}
+				}
+
+			}
+
+		}
+
+		return $hostGroups;
+}
