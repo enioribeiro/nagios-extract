@@ -64,7 +64,7 @@
 		for($i = 0; $i < sizeof($contentArray[0]); $i++){
 		
 			//Separa cada atributo em $key e $value			
-			preg_match("/(#|use|hosts|host_name|hostgroup_name|service_description|check_command|action_url)(.*?)\n$/m", $contentArray[0][$i], $itensArray);
+			preg_match("/(#|use|hosts|host|host_name|hostgroup_name|service_description|check_command|action_url)(.*?)\n$/m", $contentArray[0][$i], $itensArray);
 			
 			if(sizeof($itensArray) > 0){
 					$key 	= trim($itensArray[1]);
@@ -74,9 +74,13 @@
 					$value = preg_replace('@\s*;.*$@', '', $value);
 
 
-					if($key != 'action_url' && $key != 'hostgroup_name')
+					if($key != 'action_url' && $key != 'hostgroup_name' && $key !='host' && $key !='hosts')
 						$itens[$key] = $value;
-				
+		
+					if($key == 'host' || $key =='hosts'){
+						$itens['host_name'] = $value;
+					}
+		
 					if($key == 'hostgroup_name'){
 						 	//Hosts
                             if($argc == 3){
