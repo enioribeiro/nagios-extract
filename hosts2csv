@@ -29,7 +29,7 @@
 	$lines = null;
 
 
-	preg_match_all("/^define host{(.*?)}/ms", $content, $hosts);
+	preg_match_all("/^define host(\s|){(.*?)}/ms", $content, $hosts);
 
 
 	$printHeader = true;

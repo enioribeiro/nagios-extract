@@ -28,7 +28,7 @@
 	$lines = null;
 
 
-	preg_match_all("/^define service{(.*?)}/ms", $content, $hosts);
+	preg_match_all("/^define service(\s|){(.*?)}/ms", $content, $hosts);
 
 	$printHeader = true;
 
